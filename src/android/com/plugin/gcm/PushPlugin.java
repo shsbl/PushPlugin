@@ -1,4 +1,4 @@
-ackage com.plugin.gcm;
+package com.plugin.gcm;
 
 import java.util.Iterator;
 
