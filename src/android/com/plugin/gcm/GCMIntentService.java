@@ -21,9 +21,9 @@ import android.util.Log;
 @SuppressLint("NewApi")
 public class GCMIntentService extends GCMBaseIntentService {
 
-	public static final int NOTIFICATION_ID = 237;
+	public static final int DEFAULT_NOTIFICATION_ID = 1;
 	private static final String TAG = "GCMIntentService";
-	
+
 	public GCMIntentService() {
 		super("GCMIntentService");
 	}
@@ -67,20 +67,29 @@ public class GCMIntentService extends GCMBaseIntentService {
 		Bundle extras = intent.getExtras();
 		if (extras != null)
 		{
-			// if we are in the foreground, just surface the payload, else post it to the statusbar
-            if (PushPlugin.isInForeground()) {
-				extras.putBoolean("foreground", true);
-                PushPlugin.sendExtras(extras);
+			String action = extras.getString("action");
+			if (action == null) {
+				Log.d(TAG, "onMessage - missing action");
+			} else {
+				Log.d(TAG, "onMessage - action: [" + action + "]");
 			}
-			else {
+			if (action != null && action.equals("dismiss_notification")) {
+				dismissNotification(context, extras);
+				return;
+			}
+			// if we are in the foreground, surface the payload with foreground = true.
+			if (PushPlugin.isInForeground()) {
+				extras.putBoolean("foreground", true);
+				extras.putBoolean("user_click", false);
+				PushPlugin.sendExtras(extras);
+			}
+			// Send a notification if there is a message
+			if (extras.getString("message") != null && extras.getString("message").length() != 0) {
 				extras.putBoolean("foreground", false);
-
-                // Send a notification if there is a message
-                if (extras.getString("message") != null && extras.getString("message").length() != 0) {
-                    createNotification(context, extras);
-                }
-            }
-        }
+				extras.putBoolean("user_click", true);
+				createNotification(context, extras);
+			}
+		}
 	}
 
 	public void createNotification(Context context, Bundle extras)
@@ -93,9 +102,9 @@ public class GCMIntentService extends GCMBaseIntentService {
 		notificationIntent.putExtra("pushBundle", extras);
 
 		PendingIntent contentIntent = PendingIntent.getActivity(this, 0, notificationIntent, PendingIntent.FLAG_UPDATE_CURRENT);
-		
+
 		NotificationCompat.Builder mBuilder =
-			new NotificationCompat.Builder(context)
+				new NotificationCompat.Builder(context)
 				.setDefaults(Notification.DEFAULT_ALL)
 				.setSmallIcon(context.getApplicationInfo().icon)
 				.setWhen(System.currentTimeMillis())
@@ -114,26 +123,39 @@ public class GCMIntentService extends GCMBaseIntentService {
 		if (msgcnt != null) {
 			mBuilder.setNumber(Integer.parseInt(msgcnt));
 		}
-		
-		mNotificationManager.notify((String) appName, NOTIFICATION_ID, mBuilder.build());
+
+		mNotificationManager.notify((String) appName, getMessageID(extras), mBuilder.build());
 	}
-	
-	public static void cancelNotification(Context context)
+
+	public static void dismissNotification(Context context, Bundle extras)
 	{
+		Log.d(TAG, "dismissNotification " + getMessageID(extras));
 		NotificationManager mNotificationManager = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
-		mNotificationManager.cancel((String)getAppName(context), NOTIFICATION_ID);	
+		mNotificationManager.cancel((String)getAppName(context), getMessageID(extras));
 	}
-	
+
 	private static String getAppName(Context context)
 	{
-		CharSequence appName = 
+		CharSequence appName =
 				context
-					.getPackageManager()
-					.getApplicationLabel(context.getApplicationInfo());
-		
+				.getPackageManager()
+				.getApplicationLabel(context.getApplicationInfo());
+
 		return (String)appName;
 	}
-	
+	public static int getMessageID(Bundle extras) {
+		if (extras == null) {
+			Log.i(TAG, "extras is null, using default message id.");
+			return DEFAULT_NOTIFICATION_ID;
+		}
+		String id = extras.getString("notification_id");
+		if (id == null) {
+			Log.i(TAG, "notification id not specified, using default one.");
+			return DEFAULT_NOTIFICATION_ID;
+		}
+		return Integer.parseInt(id);
+	}
+
 	@Override
 	public void onError(Context context, String errorId) {
 		Log.e(TAG, "onError - errorId: " + errorId);
