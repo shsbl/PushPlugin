@@ -58,6 +58,10 @@ public class PushHandlerActivity extends Activity
 	{
 		PackageManager pm = getPackageManager();
 		Intent launchIntent = pm.getLaunchIntentForPackage(getApplicationContext().getPackageName());
+<<<<<<< HEAD
 		startActivity(launchIntent);
+=======
+		startActivity(launchIntente;
+>>>>>>> 9dc87e953a4ee9b1f145f26c6409f7f74e146551
 	}
 }
