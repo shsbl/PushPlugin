@@ -113,6 +113,7 @@ public class PushPlugin extends CordovaPlugin {
 	public static void sendExtras(Bundle extras)
 	{
 		if (extras != null) {
+			extras.putBoolean("foreground", gForeground);
 			if (gECB != null && gWebView != null) {
 				sendJavascript(convertBundleToJson(extras));
 			} else {
