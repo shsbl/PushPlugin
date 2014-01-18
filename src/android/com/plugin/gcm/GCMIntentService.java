@@ -21,7 +21,7 @@ import android.util.Log;
 @SuppressLint("NewApi")
 public class GCMIntentService extends GCMBaseIntentService {
 
-	public static final int DEFAULT_NOTIFICATION_ID = 1;
+	public static final String DEFAULT_NOTIFICATION_ID = "1";
 	private static final String TAG = "GCMIntentService";
 
 	public GCMIntentService() {
@@ -95,13 +95,12 @@ public class GCMIntentService extends GCMBaseIntentService {
 	public void createNotification(Context context, Bundle extras)
 	{
 		NotificationManager mNotificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
-		String appName = getAppName(this);
 
 		Intent notificationIntent = new Intent(this, PushHandlerActivity.class);
 		notificationIntent.addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP | Intent.FLAG_ACTIVITY_CLEAR_TOP);
 		notificationIntent.putExtra("pushBundle", extras);
 
-		PendingIntent contentIntent = PendingIntent.getActivity(this, getMessageID(extras), notificationIntent, PendingIntent.FLAG_UPDATE_CURRENT);
+		PendingIntent contentIntent = PendingIntent.getActivity(this, getTagName(context, extras).hashCode(), notificationIntent, PendingIntent.FLAG_ONE_SHOT);
 
 		NotificationCompat.Builder mBuilder =
 				new NotificationCompat.Builder(context)
@@ -125,14 +124,19 @@ public class GCMIntentService extends GCMBaseIntentService {
 			mBuilder.setNumber(Integer.parseInt(msgcnt));
 		}
 
-		mNotificationManager.notify((String) appName, getMessageID(extras), mBuilder.build());
+		mNotificationManager.notify(getTagName(context, extras), 0, mBuilder.build());
 	}
 
 	public static void dismissNotification(Context context, Bundle extras)
 	{
 		Log.d(TAG, "dismissNotification " + getMessageID(extras));
 		NotificationManager mNotificationManager = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
-		mNotificationManager.cancel((String)getAppName(context), getMessageID(extras));
+		mNotificationManager.cancel(getTagName(context, extras), 0);
+	}
+
+	private static String getTagName(Context context, Bundle extras)
+	{
+		return getAppName(context) + getMessageID(extras);
 	}
 
 	private static String getAppName(Context context)
@@ -144,7 +148,8 @@ public class GCMIntentService extends GCMBaseIntentService {
 
 		return (String)appName;
 	}
-	public static int getMessageID(Bundle extras) {
+
+	public static String getMessageID(Bundle extras) {
 		if (extras == null) {
 			Log.i(TAG, "extras is null, using default message id.");
 			return DEFAULT_NOTIFICATION_ID;
@@ -154,7 +159,7 @@ public class GCMIntentService extends GCMBaseIntentService {
 			Log.i(TAG, "notification id not specified, using default one.");
 			return DEFAULT_NOTIFICATION_ID;
 		}
-		return Integer.parseInt(id);
+		return id;
 	}
 
 	@Override
